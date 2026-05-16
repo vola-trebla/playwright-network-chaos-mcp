@@ -12,10 +12,10 @@ CI environments have flawless connectivity. APIs respond in milliseconds. CDNs n
 
 AI agents writing Playwright tests have no way to introduce or reason about network instability. They can't ask:
 
-- 🙈 *Does the checkout page show an error state when the payment API fails?*
-- 🙈 *Does the skeleton loader appear while the dashboard API is slow?*
-- 🙈 *Does the app still work if all tracking scripts are blocked?*
-- 🙈 *What happens if the network drops after the order is submitted but before the response arrives?*
+- 🙈 _Does the checkout page show an error state when the payment API fails?_
+- 🙈 _Does the skeleton loader appear while the dashboard API is slow?_
+- 🙈 _Does the app still work if all tracking scripts are blocked?_
+- 🙈 _What happens if the network drops after the order is submitted but before the response arrives?_
 
 `playwright-network-chaos-mcp` fixes that.
 
@@ -157,13 +157,13 @@ npx playwright install chromium
 
 ## 💡 Example Agent Prompts
 
-> *"Check if the checkout page shows a proper error state when the payment API returns 503"*
+> _"Check if the checkout page shows a proper error state when the payment API returns 503"_
 
-> *"Simulate a 3 second API delay on the dashboard and verify the skeleton loader appears"*
+> _"Simulate a 3 second API delay on the dashboard and verify the skeleton loader appears"_
 
-> *"Block all analytics and tracking scripts and confirm the main content still loads"*
+> _"Block all analytics and tracking scripts and confirm the main content still loads"_
 
-> *"Drop the order submission request mid-flight and check if the user sees an error message"*
+> _"Drop the order submission request mid-flight and check if the user sees an error message"_
 
 ---
 
