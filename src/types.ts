@@ -1,0 +1,42 @@
+export interface InterceptedRequest {
+  url: string;
+  method: string;
+  status?: number;
+  delay_ms?: number;
+}
+
+export interface PageState {
+  page_errors: string[];
+  console_errors: string[];
+}
+
+export interface ChaosResult {
+  url: string;
+  intercept_pattern: string;
+  intercepted_count: number;
+  intercepted_requests: InterceptedRequest[];
+  fallback_found: boolean;
+  fallback_selector: string | null;
+  page_state: PageState;
+  load_time_ms: number;
+}
+
+export interface LatencyResult {
+  url: string;
+  intercept_pattern: string;
+  intercepted_count: number;
+  intercepted_requests: InterceptedRequest[];
+  loading_state_found: boolean;
+  page_state: PageState;
+  load_time_ms: number;
+}
+
+export interface BlockResult {
+  url: string;
+  block_patterns: string[];
+  blocked_count: number;
+  blocked_urls: string[];
+  core_content_found: boolean;
+  page_state: PageState;
+  load_time_ms: number;
+}
