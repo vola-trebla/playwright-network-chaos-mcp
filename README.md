@@ -1,5 +1,10 @@
 # playwright-network-chaos-mcp 🐸💥
 
+[![npm version](https://img.shields.io/npm/v/playwright-network-chaos-mcp.svg)](https://www.npmjs.com/package/playwright-network-chaos-mcp)
+[![npm downloads](https://img.shields.io/npm/dm/playwright-network-chaos-mcp.svg)](https://www.npmjs.com/package/playwright-network-chaos-mcp)
+[![CI](https://github.com/vola-trebla/playwright-network-chaos-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/vola-trebla/playwright-network-chaos-mcp/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 An MCP server that gives AI agents **dynamic network chaos control** over Playwright browser sessions.
 
 Your tests run on perfect networks. Your users don't. This MCP lets AI agents simulate API outages, inject latency, drop connections mid-flight, and block third-party resources — then assert whether the app handles it gracefully.
