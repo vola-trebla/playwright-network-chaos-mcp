@@ -18,7 +18,7 @@ export interface ChaosResult {
   fallback_found: boolean;
   fallback_selector: string | null;
   page_state: PageState;
-  load_time_ms: number;
+  wait_time_ms: number;
 }
 
 export interface LatencyResult {
@@ -38,5 +38,5 @@ export interface BlockResult {
   blocked_urls: string[];
   core_content_found: boolean;
   page_state: PageState;
-  load_time_ms: number;
+  wait_time_ms: number;
 }

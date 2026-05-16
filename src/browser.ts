@@ -5,7 +5,10 @@ let browserPromise: Promise<Browser> | null = null;
 async function getBrowser(): Promise<Browser> {
   if (!browserPromise) browserPromise = chromium.launch({ headless: true });
   const b = await browserPromise;
-  if (!b.isConnected()) browserPromise = chromium.launch({ headless: true });
+  if (!b.isConnected()) {
+    browserPromise = chromium.launch({ headless: true });
+    return await browserPromise;
+  }
   return b;
 }
 

@@ -77,7 +77,7 @@ export async function simulateApiFailure(
           fallback_found: fallbackFound,
           fallback_selector: fallbackSelector,
           page_state: getState(),
-          load_time_ms: Date.now() - start,
+          wait_time_ms: Date.now() - start,
         };
       } finally {
         cleanup();
@@ -166,7 +166,7 @@ export async function blockResources(
           blocked_urls: blockedUrls,
           core_content_found: coreContentFound,
           page_state: getState(),
-          load_time_ms: Date.now() - start,
+          wait_time_ms: Date.now() - start,
         };
       } finally {
         cleanup();
@@ -209,7 +209,7 @@ export async function simulateNetworkDrop(
           fallback_found: fallbackFound,
           fallback_selector: fallbackSelector,
           page_state: getState(),
-          load_time_ms: Date.now() - start,
+          wait_time_ms: Date.now() - start,
         };
       } finally {
         cleanup();
