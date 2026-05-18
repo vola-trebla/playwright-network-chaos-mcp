@@ -1,6 +1,6 @@
 {
   "name": "playwright-network-chaos-mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "MCP server that gives AI agents dynamic network chaos control over Playwright browser sessions",
   "type": "module",
   "main": "dist/index.js",
