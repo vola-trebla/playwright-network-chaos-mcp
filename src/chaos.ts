@@ -1,6 +1,6 @@
-import { Page } from "playwright";
-import { InterceptedRequest, PageState, ChaosResult, LatencyResult, BlockResult } from "./types.js";
-import { withPage } from "./browser.js";
+import { Page } from 'playwright';
+import { InterceptedRequest, PageState, ChaosResult, LatencyResult, BlockResult } from './types.js';
+import { withPage } from './browser.js';
 
 const DEFAULT_VIEWPORT = { width: 1280, height: 720 };
 const DEFAULT_WAIT_MS = 2000;
@@ -11,16 +11,16 @@ function collectPageState(page: Page): { cleanup: () => void; getState: () => Pa
 
   const onPageError = (err: Error) => pageErrors.push(err.message);
   const onConsole = (msg: { type: () => string; text: () => string }) => {
-    if (msg.type() === "error") consoleErrors.push(msg.text());
+    if (msg.type() === 'error') consoleErrors.push(msg.text());
   };
 
-  page.on("pageerror", onPageError);
-  page.on("console", onConsole);
+  page.on('pageerror', onPageError);
+  page.on('console', onConsole);
 
   return {
     cleanup: () => {
-      page.off("pageerror", onPageError);
-      page.off("console", onConsole);
+      page.off('pageerror', onPageError);
+      page.off('console', onConsole);
     },
     getState: () => ({ page_errors: pageErrors, console_errors: consoleErrors }),
   };
@@ -59,7 +59,7 @@ export async function simulateApiFailure(
         await route.fulfill({
           status: statusCode,
           body: responseBody,
-          contentType: "application/json",
+          contentType: 'application/json',
         });
       });
     },
@@ -116,7 +116,7 @@ export async function injectLatency(
       const start = Date.now();
       try {
         const loadingStateFound = await checkSelector(page, loadingSelector);
-        await page.waitForLoadState("networkidle").catch(() => null);
+        await page.waitForLoadState('networkidle').catch(() => null);
         return {
           url,
           intercept_pattern: interceptPattern,
@@ -192,7 +192,7 @@ export async function simulateNetworkDrop(
       await page.route(interceptPattern, async (route) => {
         intercepted.push({ url: route.request().url(), method: route.request().method() });
         await new Promise((r) => setTimeout(r, dropAfterMs));
-        await route.abort("connectionaborted");
+        await route.abort('connectionaborted');
       });
     },
     async (page) => {

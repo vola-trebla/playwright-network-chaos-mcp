@@ -1,34 +1,34 @@
 #!/usr/bin/env node
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import * as z from "zod/v4";
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import * as z from 'zod/v4';
 import {
   simulateApiFailure,
   injectLatency,
   blockResources,
   simulateNetworkDrop,
   DEFAULT_WAIT_MS,
-} from "./chaos.js";
-import { closeBrowser } from "./browser.js";
+} from './chaos.js';
+import { closeBrowser } from './browser.js';
 
 const server = new McpServer({
-  name: "playwright-network-chaos-mcp",
-  version: "0.1.0",
+  name: 'playwright-network-chaos-mcp',
+  version: '0.1.0',
 });
 
 const viewportSchema = z
   .object({
-    width: z.number().int().min(320).max(3840).describe("Viewport width in px"),
-    height: z.number().int().min(240).max(2160).describe("Viewport height in px"),
+    width: z.number().int().min(320).max(3840).describe('Viewport width in px'),
+    height: z.number().int().min(240).max(2160).describe('Viewport height in px'),
   })
   .optional()
-  .describe("Viewport size (default: 1280×720)");
+  .describe('Viewport size (default: 1280×720)');
 
 function errorResponse(err: unknown) {
   return {
     content: [
       {
-        type: "text" as const,
+        type: 'text' as const,
         text: `Error: ${err instanceof Error ? err.message : String(err)}`,
       },
     ],
@@ -37,14 +37,14 @@ function errorResponse(err: unknown) {
 }
 
 server.registerTool(
-  "simulate_api_failure",
+  'simulate_api_failure',
   {
     description:
-      "Intercepts API requests matching a URL pattern and makes them return an error status code. " +
-      "Navigates to the page and checks if a fallback UI element appears. " +
-      "Use to answer: does the app show a proper error state when the payment API returns 503?",
+      'Intercepts API requests matching a URL pattern and makes them return an error status code. ' +
+      'Navigates to the page and checks if a fallback UI element appears. ' +
+      'Use to answer: does the app show a proper error state when the payment API returns 503?',
     inputSchema: {
-      url: z.string().url().describe("URL of the page to test"),
+      url: z.string().url().describe('URL of the page to test'),
       intercept_pattern: z
         .string()
         .describe("Glob pattern for requests to intercept (e.g., '**/api/payment**')"),
@@ -54,11 +54,11 @@ server.registerTool(
         .min(400)
         .max(599)
         .default(503)
-        .describe("HTTP error status code to return (default: 503)"),
+        .describe('HTTP error status code to return (default: 503)'),
       response_body: z
         .string()
         .default('{"error":"Service Unavailable"}')
-        .describe("Response body to return for intercepted requests"),
+        .describe('Response body to return for intercepted requests'),
       fallback_selector: z
         .string()
         .optional()
@@ -70,7 +70,7 @@ server.registerTool(
         .max(10000)
         .default(DEFAULT_WAIT_MS)
         .describe(
-          "Milliseconds to wait after navigation before checking the fallback (default: 2000)"
+          'Milliseconds to wait after navigation before checking the fallback (default: 2000)'
         ),
       viewport: viewportSchema,
     },
@@ -94,7 +94,7 @@ server.registerTool(
         wait_ms,
         viewport
       );
-      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+      return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
     } catch (err) {
       return errorResponse(err);
     }
@@ -102,13 +102,13 @@ server.registerTool(
 );
 
 server.registerTool(
-  "inject_latency",
+  'inject_latency',
   {
     description:
-      "Adds artificial delay to requests matching a URL pattern, simulating slow networks or overloaded APIs. " +
-      "Use to answer: does the app show loading states when the API takes 3 seconds? Does it time out gracefully?",
+      'Adds artificial delay to requests matching a URL pattern, simulating slow networks or overloaded APIs. ' +
+      'Use to answer: does the app show loading states when the API takes 3 seconds? Does it time out gracefully?',
     inputSchema: {
-      url: z.string().url().describe("URL of the page to test"),
+      url: z.string().url().describe('URL of the page to test'),
       intercept_pattern: z
         .string()
         .describe("Glob pattern for requests to delay (e.g., '**/api/**')"),
@@ -118,14 +118,14 @@ server.registerTool(
         .min(0)
         .max(30000)
         .default(3000)
-        .describe("Base delay in milliseconds to add to each matched request (default: 3000)"),
+        .describe('Base delay in milliseconds to add to each matched request (default: 3000)'),
       jitter_ms: z
         .number()
         .int()
         .min(0)
         .max(5000)
         .default(0)
-        .describe("Random additional delay in milliseconds (default: 0)"),
+        .describe('Random additional delay in milliseconds (default: 0)'),
       loading_selector: z
         .string()
         .optional()
@@ -145,7 +145,7 @@ server.registerTool(
         loading_selector ?? null,
         viewport
       );
-      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+      return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
     } catch (err) {
       return errorResponse(err);
     }
@@ -153,13 +153,13 @@ server.registerTool(
 );
 
 server.registerTool(
-  "block_resources",
+  'block_resources',
   {
     description:
-      "Blocks requests to specified URL patterns — useful for simulating third-party outages (analytics, CDNs, tracking). " +
-      "Use to answer: does the app still load and function if Google Analytics or a CDN is down?",
+      'Blocks requests to specified URL patterns — useful for simulating third-party outages (analytics, CDNs, tracking). ' +
+      'Use to answer: does the app still load and function if Google Analytics or a CDN is down?',
     inputSchema: {
-      url: z.string().url().describe("URL of the page to test"),
+      url: z.string().url().describe('URL of the page to test'),
       block_patterns: z
         .array(z.string())
         .min(1)
@@ -180,7 +180,7 @@ server.registerTool(
         .max(10000)
         .default(DEFAULT_WAIT_MS)
         .describe(
-          "Milliseconds to wait after navigation before checking core content (default: 2000)"
+          'Milliseconds to wait after navigation before checking core content (default: 2000)'
         ),
       viewport: viewportSchema,
     },
@@ -194,7 +194,7 @@ server.registerTool(
         wait_ms,
         viewport
       );
-      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+      return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
     } catch (err) {
       return errorResponse(err);
     }
@@ -202,13 +202,13 @@ server.registerTool(
 );
 
 server.registerTool(
-  "simulate_network_drop",
+  'simulate_network_drop',
   {
     description:
-      "Aborts requests matching a pattern after a delay, simulating a mid-flight connection drop. " +
-      "Use to answer: what happens if the network drops after the order request is sent but before the response arrives?",
+      'Aborts requests matching a pattern after a delay, simulating a mid-flight connection drop. ' +
+      'Use to answer: what happens if the network drops after the order request is sent but before the response arrives?',
     inputSchema: {
-      url: z.string().url().describe("URL of the page to test"),
+      url: z.string().url().describe('URL of the page to test'),
       intercept_pattern: z
         .string()
         .describe("Glob pattern for requests to drop (e.g., '**/api/order**')"),
@@ -219,7 +219,7 @@ server.registerTool(
         .max(10000)
         .default(500)
         .describe(
-          "Milliseconds to wait before aborting the request, simulating mid-flight drop (default: 500)"
+          'Milliseconds to wait before aborting the request, simulating mid-flight drop (default: 500)'
         ),
       fallback_selector: z
         .string()
@@ -231,7 +231,7 @@ server.registerTool(
         .min(0)
         .max(10000)
         .default(DEFAULT_WAIT_MS)
-        .describe("Milliseconds to wait after navigation before checking fallback (default: 2000)"),
+        .describe('Milliseconds to wait after navigation before checking fallback (default: 2000)'),
       viewport: viewportSchema,
     },
   },
@@ -245,7 +245,7 @@ server.registerTool(
         wait_ms,
         viewport
       );
-      return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+      return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
     } catch (err) {
       return errorResponse(err);
     }
@@ -256,8 +256,8 @@ const shutdown = async () => {
   await closeBrowser();
   process.exit(0);
 };
-process.on("SIGINT", shutdown);
-process.on("SIGTERM", shutdown);
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
 
 const transport = new StdioServerTransport();
 await server.connect(transport);

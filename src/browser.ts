@@ -1,4 +1,4 @@
-import { chromium, Browser, BrowserContext, Page } from "playwright";
+import { chromium, Browser, BrowserContext, Page } from 'playwright';
 
 let browserPromise: Promise<Browser> | null = null;
 
@@ -24,7 +24,7 @@ export async function withPage<T>(
     context = await browser.newContext({ viewport });
     const page = await context.newPage();
     await setup(page);
-    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
     return await fn(page);
   } finally {
     await context?.close();
