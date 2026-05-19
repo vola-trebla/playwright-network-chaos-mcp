@@ -40,3 +40,15 @@ export interface BlockResult {
   page_state: PageState;
   wait_time_ms: number;
 }
+
+export interface SystemNetworkErrorResult {
+  url: string;
+  intercept_pattern: string;
+  error_code: string;
+  intercepted_count: number;
+  intercepted_requests: InterceptedRequest[];
+  fallback_found: boolean;
+  fallback_selector: string | null;
+  page_state: PageState;
+  wait_time_ms: number;
+}

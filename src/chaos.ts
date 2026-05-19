@@ -1,5 +1,12 @@
 import { Page } from 'playwright';
-import { InterceptedRequest, PageState, ChaosResult, LatencyResult, BlockResult } from './types.js';
+import {
+  InterceptedRequest,
+  PageState,
+  ChaosResult,
+  LatencyResult,
+  BlockResult,
+  SystemNetworkErrorResult,
+} from './types.js';
 import { withPage } from './browser.js';
 
 const DEFAULT_VIEWPORT = { width: 1280, height: 720 };
@@ -204,6 +211,49 @@ export async function simulateNetworkDrop(
         return {
           url,
           intercept_pattern: interceptPattern,
+          intercepted_count: intercepted.length,
+          intercepted_requests: intercepted,
+          fallback_found: fallbackFound,
+          fallback_selector: fallbackSelector,
+          page_state: getState(),
+          wait_time_ms: Date.now() - start,
+        };
+      } finally {
+        cleanup();
+      }
+    }
+  );
+}
+
+export async function triggerSystemNetworkError(
+  url: string,
+  interceptPattern: string,
+  errorCode: 'addressunreachable' | 'connectionaborted' | 'accessdenied' | 'aborted',
+  fallbackSelector: string | null,
+  waitMs: number,
+  viewport = DEFAULT_VIEWPORT
+): Promise<SystemNetworkErrorResult> {
+  const intercepted: InterceptedRequest[] = [];
+
+  return withPage(
+    url,
+    viewport,
+    async (page) => {
+      await page.route(interceptPattern, async (route) => {
+        intercepted.push({ url: route.request().url(), method: route.request().method() });
+        await route.abort(errorCode);
+      });
+    },
+    async (page) => {
+      const { getState, cleanup } = collectPageState(page);
+      const start = Date.now();
+      try {
+        await page.waitForTimeout(waitMs);
+        const fallbackFound = await checkSelector(page, fallbackSelector);
+        return {
+          url,
+          intercept_pattern: interceptPattern,
+          error_code: errorCode,
           intercepted_count: intercepted.length,
           intercepted_requests: intercepted,
           fallback_found: fallbackFound,
