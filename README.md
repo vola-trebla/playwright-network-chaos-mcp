@@ -132,6 +132,109 @@ Aborts requests mid-flight after a delay — simulating connection loss between 
 
 ---
 
+### `trigger_system_network_error`
+
+Aborts requests with an OS-level error code — simulating DNS failures, firewall blocks, and connection resets.
+
+```json
+{
+  "url": "https://your-app.com/dashboard",
+  "intercept_pattern": "**/api/**",
+  "error_code": "addressunreachable",
+  "fallback_selector": ".network-error"
+}
+```
+
+```json
+{
+  "error_code": "addressunreachable",
+  "intercepted_count": 3,
+  "fallback_found": true,
+  "page_state": { "page_errors": [], "console_errors": ["net::ERR_ADDRESS_UNREACHABLE"] }
+}
+```
+
+---
+
+### `simulate_stateful_failure`
+
+Fails the first N requests then lets subsequent ones succeed — testing retry logic and recovery flows.
+
+```json
+{
+  "url": "https://your-app.com/dashboard",
+  "intercept_pattern": "**/api/data**",
+  "http_status": 503,
+  "failure_count": 2,
+  "success_payload": "{\"data\":[]}",
+  "fallback_selector": ".retry-button"
+}
+```
+
+```json
+{
+  "failure_count": 2,
+  "actual_failed": 2,
+  "actual_succeeded": 1,
+  "intercepted_requests": [
+    { "url": "...", "method": "GET", "status": 503, "attempt": 1, "outcome": "failed" },
+    { "url": "...", "method": "GET", "status": 200, "attempt": 3, "outcome": "passed" }
+  ],
+  "fallback_found": true
+}
+```
+
+---
+
+### `inject_response_corruption`
+
+Serves malformed responses at the protocol level — unterminated JSON, content-length lies, or truncated payloads.
+
+```json
+{
+  "url": "https://your-app.com/checkout",
+  "intercept_pattern": "**/api/order**",
+  "corruption_type": "malformed_json",
+  "fallback_selector": ".parse-error"
+}
+```
+
+```json
+{
+  "corruption_type": "malformed_json",
+  "intercepted_count": 1,
+  "fallback_found": false,
+  "page_state": { "page_errors": ["SyntaxError: Unexpected token u in JSON"] }
+}
+```
+
+---
+
+### `assert_chaos_handled`
+
+Injects a chaos HTTP status and returns a structured pass/fail verdict — `chaos_survived` is true only when the fallback UI appears and there are no unhandled JS exceptions.
+
+```json
+{
+  "url": "https://your-app.com/checkout",
+  "intercept_pattern": "**/api/**",
+  "http_status": 500,
+  "expected_fallback_selector": ".error-boundary"
+}
+```
+
+```json
+{
+  "http_status": 500,
+  "unhandled_exceptions": [],
+  "console_errors": ["Failed to load resource: 500"],
+  "fallback_ui_detected": true,
+  "chaos_survived": true
+}
+```
+
+---
+
 ## 🚀 Installation
 
 ```bash
@@ -169,6 +272,12 @@ npx playwright install chromium
 > _"Block all analytics and tracking scripts and confirm the main content still loads"_
 
 > _"Drop the order submission request mid-flight and check if the user sees an error message"_
+
+> _"Simulate DNS failure for the API and check if the error boundary renders"_
+
+> _"Fail the first 3 requests then succeed — does the app retry and recover automatically?"_
+
+> _"Inject malformed JSON and assert the app doesn't crash — return a chaos verdict"_
 
 ---
 
