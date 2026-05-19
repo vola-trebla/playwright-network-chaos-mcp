@@ -10,6 +10,7 @@ import {
   triggerSystemNetworkError,
   simulateStatefulFailure,
   injectResponseCorruption,
+  assertChaosHandled,
   DEFAULT_WAIT_MS,
 } from './chaos.js';
 import { closeBrowser } from './browser.js';
@@ -432,6 +433,68 @@ server.registerTool(
         corruption_type,
         truncate_at_byte,
         fallback_selector ?? null,
+        wait_ms,
+        viewport
+      );
+      return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+    } catch (err) {
+      return errorResponse(err);
+    }
+  }
+);
+
+server.registerTool(
+  'assert_chaos_handled',
+  {
+    description:
+      'Injects a chaos HTTP status into all matching requests, then returns a structured verdict: ' +
+      'did the app show a fallback UI, were there unhandled JS exceptions, and did it survive? ' +
+      'Use to answer: is the app chaos-resilient — does it show a recovery UI without throwing exceptions?',
+    inputSchema: {
+      url: z.string().url().describe('URL of the page to test'),
+      intercept_pattern: z
+        .string()
+        .describe("Glob pattern for requests to fail (e.g., '**/api/**')"),
+      http_status: z
+        .number()
+        .int()
+        .min(400)
+        .max(599)
+        .default(500)
+        .describe('HTTP error status to return for all matching requests (default: 500)'),
+      expected_fallback_selector: z
+        .string()
+        .optional()
+        .describe(
+          "CSS selector for the fallback/error UI expected to appear (e.g., '.error-boundary'). " +
+            'chaos_survived is true only when this is found AND there are no unhandled exceptions.'
+        ),
+      wait_ms: z
+        .number()
+        .int()
+        .min(0)
+        .max(10000)
+        .default(DEFAULT_WAIT_MS)
+        .describe(
+          'Milliseconds to wait after navigation before evaluating verdict (default: 2000)'
+        ),
+      viewport: viewportSchema,
+    },
+  },
+  async ({
+    url,
+    intercept_pattern,
+    http_status,
+    expected_fallback_selector,
+    wait_ms,
+    viewport,
+  }) => {
+    try {
+      const result = await assertChaosHandled(
+        url,
+        intercept_pattern,
+        http_status,
+        expected_fallback_selector ?? null,
         wait_ms,
         viewport
       );

@@ -8,6 +8,7 @@ import {
   SystemNetworkErrorResult,
   StatefulFailureResult,
   ResponseCorruptionResult,
+  ChaosVerdict,
 } from './types.js';
 import { withPage } from './browser.js';
 
@@ -398,6 +399,47 @@ export async function injectResponseCorruption(
           fallback_found: fallbackFound,
           fallback_selector: fallbackSelector,
           page_state: getState(),
+          wait_time_ms: Date.now() - start,
+        };
+      } finally {
+        cleanup();
+      }
+    }
+  );
+}
+
+export async function assertChaosHandled(
+  url: string,
+  interceptPattern: string,
+  httpStatus: number,
+  expectedFallbackSelector: string | null,
+  waitMs: number,
+  viewport = DEFAULT_VIEWPORT
+): Promise<ChaosVerdict> {
+  return withPage(
+    url,
+    viewport,
+    async (page) => {
+      await page.route(interceptPattern, async (route) => {
+        await route.fulfill({ status: httpStatus });
+      });
+    },
+    async (page) => {
+      const { getState, cleanup } = collectPageState(page);
+      const start = Date.now();
+      try {
+        await page.waitForTimeout(waitMs);
+        const state = getState();
+        const fallbackUiDetected = await checkSelector(page, expectedFallbackSelector);
+        return {
+          url,
+          intercept_pattern: interceptPattern,
+          http_status: httpStatus,
+          unhandled_exceptions: state.page_errors,
+          console_errors: state.console_errors,
+          fallback_ui_detected: fallbackUiDetected,
+          expected_fallback_selector: expectedFallbackSelector,
+          chaos_survived: fallbackUiDetected && state.page_errors.length === 0,
           wait_time_ms: Date.now() - start,
         };
       } finally {

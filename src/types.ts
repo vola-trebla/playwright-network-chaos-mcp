@@ -80,3 +80,15 @@ export interface ResponseCorruptionResult {
   page_state: PageState;
   wait_time_ms: number;
 }
+
+export interface ChaosVerdict {
+  url: string;
+  intercept_pattern: string;
+  http_status: number;
+  unhandled_exceptions: string[];
+  console_errors: string[];
+  fallback_ui_detected: boolean;
+  expected_fallback_selector: string | null;
+  chaos_survived: boolean;
+  wait_time_ms: number;
+}
