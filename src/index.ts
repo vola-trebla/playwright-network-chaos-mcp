@@ -7,6 +7,7 @@ import {
   injectLatency,
   blockResources,
   simulateNetworkDrop,
+  triggerSystemNetworkError,
   DEFAULT_WAIT_MS,
 } from './chaos.js';
 import { closeBrowser } from './browser.js';
@@ -241,6 +242,55 @@ server.registerTool(
         url,
         intercept_pattern,
         drop_after_ms,
+        fallback_selector ?? null,
+        wait_ms,
+        viewport
+      );
+      return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+    } catch (err) {
+      return errorResponse(err);
+    }
+  }
+);
+
+server.registerTool(
+  'trigger_system_network_error',
+  {
+    description:
+      'Aborts requests matching a URL pattern with a system-level network error code, simulating OS-level failures ' +
+      'like unreachable hosts or access denied. ' +
+      'Use to answer: does the app recover when the DNS resolution fails or the OS rejects a connection?',
+    inputSchema: {
+      url: z.string().url().describe('URL of the page to test'),
+      intercept_pattern: z
+        .string()
+        .describe("Glob pattern for requests to abort (e.g., '**/api/payment**')"),
+      error_code: z
+        .enum(['addressunreachable', 'connectionaborted', 'accessdenied', 'aborted'])
+        .describe(
+          'System network error code: addressunreachable (DNS/routing failure), ' +
+            'connectionaborted (mid-flight drop), accessdenied (firewall/OS block), aborted (generic abort)'
+        ),
+      fallback_selector: z
+        .string()
+        .optional()
+        .describe("CSS selector for the fallback UI that should appear (e.g., '.network-error')"),
+      wait_ms: z
+        .number()
+        .int()
+        .min(0)
+        .max(10000)
+        .default(DEFAULT_WAIT_MS)
+        .describe('Milliseconds to wait after navigation before checking fallback (default: 2000)'),
+      viewport: viewportSchema,
+    },
+  },
+  async ({ url, intercept_pattern, error_code, fallback_selector, wait_ms, viewport }) => {
+    try {
+      const result = await triggerSystemNetworkError(
+        url,
+        intercept_pattern,
+        error_code,
         fallback_selector ?? null,
         wait_ms,
         viewport
