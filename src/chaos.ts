@@ -6,6 +6,7 @@ import {
   LatencyResult,
   BlockResult,
   SystemNetworkErrorResult,
+  StatefulFailureResult,
 } from './types.js';
 import { withPage } from './browser.js';
 
@@ -255,6 +256,78 @@ export async function triggerSystemNetworkError(
           intercept_pattern: interceptPattern,
           error_code: errorCode,
           intercepted_count: intercepted.length,
+          intercepted_requests: intercepted,
+          fallback_found: fallbackFound,
+          fallback_selector: fallbackSelector,
+          page_state: getState(),
+          wait_time_ms: Date.now() - start,
+        };
+      } finally {
+        cleanup();
+      }
+    }
+  );
+}
+
+export async function simulateStatefulFailure(
+  url: string,
+  interceptPattern: string,
+  httpStatus: number,
+  failureCount: number,
+  successPayload: string,
+  fallbackSelector: string | null,
+  waitMs: number,
+  viewport = DEFAULT_VIEWPORT
+): Promise<StatefulFailureResult> {
+  let counter = 0;
+  const intercepted: Array<InterceptedRequest & { attempt: number; outcome: 'failed' | 'passed' }> =
+    [];
+
+  return withPage(
+    url,
+    viewport,
+    async (page) => {
+      await page.route(interceptPattern, async (route) => {
+        const attempt = ++counter;
+        if (attempt <= failureCount) {
+          intercepted.push({
+            url: route.request().url(),
+            method: route.request().method(),
+            status: httpStatus,
+            attempt,
+            outcome: 'failed',
+          });
+          await route.fulfill({ status: httpStatus, body: '{"error":"simulated failure"}' });
+        } else {
+          intercepted.push({
+            url: route.request().url(),
+            method: route.request().method(),
+            status: 200,
+            attempt,
+            outcome: 'passed',
+          });
+          await route.fulfill({
+            status: 200,
+            body: successPayload,
+            contentType: 'application/json',
+          });
+        }
+      });
+    },
+    async (page) => {
+      const { getState, cleanup } = collectPageState(page);
+      const start = Date.now();
+      try {
+        await page.waitForTimeout(waitMs);
+        const fallbackFound = await checkSelector(page, fallbackSelector);
+        const actualFailed = intercepted.filter((r) => r.outcome === 'failed').length;
+        return {
+          url,
+          intercept_pattern: interceptPattern,
+          http_status: httpStatus,
+          failure_count: failureCount,
+          actual_failed: actualFailed,
+          actual_succeeded: intercepted.length - actualFailed,
           intercepted_requests: intercepted,
           fallback_found: fallbackFound,
           fallback_selector: fallbackSelector,

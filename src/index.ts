@@ -8,6 +8,7 @@ import {
   blockResources,
   simulateNetworkDrop,
   triggerSystemNetworkError,
+  simulateStatefulFailure,
   DEFAULT_WAIT_MS,
 } from './chaos.js';
 import { closeBrowser } from './browser.js';
@@ -291,6 +292,79 @@ server.registerTool(
         url,
         intercept_pattern,
         error_code,
+        fallback_selector ?? null,
+        wait_ms,
+        viewport
+      );
+      return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+    } catch (err) {
+      return errorResponse(err);
+    }
+  }
+);
+
+server.registerTool(
+  'simulate_stateful_failure',
+  {
+    description:
+      'Intercepts requests matching a URL pattern and fails the first N requests with an error status, ' +
+      'then lets subsequent requests succeed. Simulates transient failures and tests retry/recovery logic. ' +
+      'Use to answer: does the app retry after a 503 and recover when the service comes back?',
+    inputSchema: {
+      url: z.string().url().describe('URL of the page to test'),
+      intercept_pattern: z
+        .string()
+        .describe("Glob pattern for requests to intercept (e.g., '**/api/data**')"),
+      http_status: z
+        .number()
+        .int()
+        .min(400)
+        .max(599)
+        .default(503)
+        .describe('HTTP error status code for the failing requests (default: 503)'),
+      failure_count: z
+        .number()
+        .int()
+        .min(1)
+        .default(3)
+        .describe('Number of requests to fail before allowing success (default: 3)'),
+      success_payload: z
+        .string()
+        .default('{"ok":true}')
+        .describe('Response body for requests after the failure window (default: {"ok":true})'),
+      fallback_selector: z
+        .string()
+        .optional()
+        .describe(
+          "CSS selector for the fallback/retry UI that should appear (e.g., '.retry-button')"
+        ),
+      wait_ms: z
+        .number()
+        .int()
+        .min(0)
+        .max(10000)
+        .default(DEFAULT_WAIT_MS)
+        .describe('Milliseconds to wait after navigation before checking state (default: 2000)'),
+      viewport: viewportSchema,
+    },
+  },
+  async ({
+    url,
+    intercept_pattern,
+    http_status,
+    failure_count,
+    success_payload,
+    fallback_selector,
+    wait_ms,
+    viewport,
+  }) => {
+    try {
+      const result = await simulateStatefulFailure(
+        url,
+        intercept_pattern,
+        http_status,
+        failure_count,
+        success_payload,
         fallback_selector ?? null,
         wait_ms,
         viewport
