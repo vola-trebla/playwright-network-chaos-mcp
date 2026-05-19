@@ -28,32 +28,14 @@ inject_response_corruption
 assert_chaos_handled
 ```
 
-## Секция 4 — новые инструменты v2 (tools/call via stdio)
+## Секция 4 — новые инструменты v2 (tools/call via stdio, реальный перехват)
 
-```
-[initialize + tools/list]
-  tools: simulate_api_failure, inject_latency, block_resources, simulate_network_drop,
-         trigger_system_network_error, simulate_stateful_failure, inject_response_corruption, assert_chaos_handled
-  ✓ pass
+URL: `data:text/html,...` со скриптом `fetch('http://localhost/api/test')`, паттерн `http://localhost/api/**`
 
-[trigger_system_network_error]
-  error_code=aborted intercepted=0 fallback=false
-  ✓ pass
-
-[simulate_stateful_failure]
-  failure_count=2 actual_failed=0 actual_succeeded=0
-  ✓ pass
-
-[inject_response_corruption]
-  corruption_type=malformed_json intercepted=0
-  ✓ pass
-
-[assert_chaos_handled]
-  http_status=500 chaos_survived=false exceptions=0
-  ✓ pass
-
-5/5 passed
-```
+- `trigger_system_network_error` — intercepted=1, error_code=aborted ✓
+- `simulate_stateful_failure` — actual_failed=1, intercepted_requests=[{status:503, outcome:failed}] ✓
+- `inject_response_corruption` — intercepted=1, corruption_type=malformed_json ✓
+- `assert_chaos_handled` — http_status=500, console_errors=["Failed to load resource: 500"], chaos_survived=false ✓
 
 ## Секция 8 — package install test
 
