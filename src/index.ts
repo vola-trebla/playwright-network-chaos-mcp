@@ -9,6 +9,7 @@ import {
   simulateNetworkDrop,
   triggerSystemNetworkError,
   simulateStatefulFailure,
+  injectResponseCorruption,
   DEFAULT_WAIT_MS,
 } from './chaos.js';
 import { closeBrowser } from './browser.js';
@@ -365,6 +366,71 @@ server.registerTool(
         http_status,
         failure_count,
         success_payload,
+        fallback_selector ?? null,
+        wait_ms,
+        viewport
+      );
+      return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+    } catch (err) {
+      return errorResponse(err);
+    }
+  }
+);
+
+server.registerTool(
+  'inject_response_corruption',
+  {
+    description:
+      'Intercepts requests matching a URL pattern and returns a malformed or corrupted response, ' +
+      'simulating partial network failures at the protocol level. ' +
+      'Use to answer: does the app handle malformed JSON, content-length lies, or truncated payloads without crashing?',
+    inputSchema: {
+      url: z.string().url().describe('URL of the page to test'),
+      intercept_pattern: z
+        .string()
+        .describe("Glob pattern for requests to corrupt (e.g., '**/api/data**')"),
+      corruption_type: z
+        .enum(['length_mismatch', 'malformed_json', 'truncated'])
+        .describe(
+          'Type of corruption: malformed_json (unterminated JSON body), ' +
+            'length_mismatch (content-length claims 99999 bytes but body is short), ' +
+            'truncated (body cut off at truncate_at_byte)'
+        ),
+      truncate_at_byte: z
+        .number()
+        .int()
+        .min(1)
+        .default(50)
+        .describe('Byte offset to truncate at (only used when corruption_type is truncated)'),
+      fallback_selector: z
+        .string()
+        .optional()
+        .describe("CSS selector for the fallback UI that should appear (e.g., '.parse-error')"),
+      wait_ms: z
+        .number()
+        .int()
+        .min(0)
+        .max(10000)
+        .default(DEFAULT_WAIT_MS)
+        .describe('Milliseconds to wait after navigation before checking state (default: 2000)'),
+      viewport: viewportSchema,
+    },
+  },
+  async ({
+    url,
+    intercept_pattern,
+    corruption_type,
+    truncate_at_byte,
+    fallback_selector,
+    wait_ms,
+    viewport,
+  }) => {
+    try {
+      const result = await injectResponseCorruption(
+        url,
+        intercept_pattern,
+        corruption_type,
+        truncate_at_byte,
         fallback_selector ?? null,
         wait_ms,
         viewport

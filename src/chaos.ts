@@ -7,6 +7,7 @@ import {
   BlockResult,
   SystemNetworkErrorResult,
   StatefulFailureResult,
+  ResponseCorruptionResult,
 } from './types.js';
 import { withPage } from './browser.js';
 
@@ -328,6 +329,71 @@ export async function simulateStatefulFailure(
           failure_count: failureCount,
           actual_failed: actualFailed,
           actual_succeeded: intercepted.length - actualFailed,
+          intercepted_requests: intercepted,
+          fallback_found: fallbackFound,
+          fallback_selector: fallbackSelector,
+          page_state: getState(),
+          wait_time_ms: Date.now() - start,
+        };
+      } finally {
+        cleanup();
+      }
+    }
+  );
+}
+
+export async function injectResponseCorruption(
+  url: string,
+  interceptPattern: string,
+  corruptionType: 'length_mismatch' | 'malformed_json' | 'truncated',
+  truncateAtByte: number,
+  fallbackSelector: string | null,
+  waitMs: number,
+  viewport = DEFAULT_VIEWPORT
+): Promise<ResponseCorruptionResult> {
+  const intercepted: InterceptedRequest[] = [];
+
+  return withPage(
+    url,
+    viewport,
+    async (page) => {
+      await page.route(interceptPattern, async (route) => {
+        intercepted.push({ url: route.request().url(), method: route.request().method() });
+
+        if (corruptionType === 'malformed_json') {
+          await route.fulfill({
+            status: 200,
+            body: '{"error": unterminated',
+            contentType: 'application/json',
+          });
+        } else if (corruptionType === 'length_mismatch') {
+          await route.fulfill({
+            status: 200,
+            body: '{"ok":true}',
+            headers: { 'content-length': '99999', 'content-type': 'application/json' },
+          });
+        } else {
+          const full = '{"data":"' + 'a'.repeat(200) + '"}';
+          const truncated = Buffer.from(full).slice(0, truncateAtByte);
+          await route.fulfill({
+            status: 200,
+            body: truncated,
+            contentType: 'application/json',
+          });
+        }
+      });
+    },
+    async (page) => {
+      const { getState, cleanup } = collectPageState(page);
+      const start = Date.now();
+      try {
+        await page.waitForTimeout(waitMs);
+        const fallbackFound = await checkSelector(page, fallbackSelector);
+        return {
+          url,
+          intercept_pattern: interceptPattern,
+          corruption_type: corruptionType,
+          intercepted_count: intercepted.length,
           intercepted_requests: intercepted,
           fallback_found: fallbackFound,
           fallback_selector: fallbackSelector,

@@ -68,3 +68,15 @@ export interface StatefulFailureResult {
   page_state: PageState;
   wait_time_ms: number;
 }
+
+export interface ResponseCorruptionResult {
+  url: string;
+  intercept_pattern: string;
+  corruption_type: 'length_mismatch' | 'malformed_json' | 'truncated';
+  intercepted_count: number;
+  intercepted_requests: InterceptedRequest[];
+  fallback_found: boolean;
+  fallback_selector: string | null;
+  page_state: PageState;
+  wait_time_ms: number;
+}
