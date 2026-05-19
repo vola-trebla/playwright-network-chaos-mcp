@@ -1,9 +1,42 @@
 import { spawn } from 'child_process';
+import { createServer } from 'http';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const serverPath = join(__dirname, '..', 'dist', 'index.js');
+
+async function startHttpServer() {
+  return new Promise((resolve, reject) => {
+    const server = createServer((req, res) => {
+      if (req.url === '/' || req.url === '') {
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        res.end(`<!doctype html><html><body>
+<div id="status">loading</div>
+<div id="error" style="display:none">Error</div>
+<script>
+fetch('/api/test')
+  .then(r => r.json())
+  .then(() => { document.getElementById('status').textContent = 'ok'; })
+  .catch(() => { document.getElementById('error').style.display = 'block'; });
+</script>
+</body></html>`);
+      } else if (req.url === '/api/test') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ ok: true }));
+      } else {
+        res.writeHead(404).end();
+      }
+    });
+    server.listen(0, '127.0.0.1', () => {
+      const { port } = server.address();
+      resolve({ server, port, url: `http://127.0.0.1:${port}/` });
+    });
+    server.on('error', reject);
+  });
+}
+
+const { server, url: serverUrl } = await startHttpServer();
 
 const TESTS = [
   {
@@ -48,8 +81,8 @@ const TESTS = [
         params: {
           name: 'trigger_system_network_error',
           arguments: {
-            url: 'data:text/html,<html><body><div id="error" style="display:none">Failed</div></body></html>',
-            intercept_pattern: '**/nonexistent/**',
+            url: serverUrl,
+            intercept_pattern: '**/api/**',
             error_code: 'aborted',
             wait_ms: 500,
           },
@@ -66,7 +99,7 @@ const TESTS = [
       console.log(
         `  error_code=${out.error_code} intercepted=${out.intercepted_count} fallback=${out.fallback_found}`
       );
-      return out.error_code === 'aborted';
+      return out.error_code === 'aborted' && out.intercepted_count >= 1;
     },
   },
   {
@@ -89,10 +122,10 @@ const TESTS = [
         params: {
           name: 'simulate_stateful_failure',
           arguments: {
-            url: 'data:text/html,<html><body><div id="error" style="display:none">Failed</div></body></html>',
-            intercept_pattern: '**/nonexistent/**',
+            url: serverUrl,
+            intercept_pattern: '**/api/**',
             http_status: 503,
-            failure_count: 2,
+            failure_count: 1,
             wait_ms: 500,
           },
         },
@@ -108,7 +141,7 @@ const TESTS = [
       console.log(
         `  failure_count=${out.failure_count} actual_failed=${out.actual_failed} actual_succeeded=${out.actual_succeeded}`
       );
-      return out.failure_count === 2;
+      return out.failure_count === 1 && out.actual_failed >= 1;
     },
   },
   {
@@ -131,8 +164,8 @@ const TESTS = [
         params: {
           name: 'inject_response_corruption',
           arguments: {
-            url: 'data:text/html,<html><body><div id="error" style="display:none">Failed</div></body></html>',
-            intercept_pattern: '**/nonexistent/**',
+            url: serverUrl,
+            intercept_pattern: '**/api/**',
             corruption_type: 'malformed_json',
             wait_ms: 500,
           },
@@ -147,7 +180,7 @@ const TESTS = [
       }
       const out = JSON.parse(r?.result?.content?.[0]?.text ?? '{}');
       console.log(`  corruption_type=${out.corruption_type} intercepted=${out.intercepted_count}`);
-      return out.corruption_type === 'malformed_json';
+      return out.corruption_type === 'malformed_json' && out.intercepted_count >= 1;
     },
   },
   {
@@ -170,8 +203,8 @@ const TESTS = [
         params: {
           name: 'assert_chaos_handled',
           arguments: {
-            url: 'data:text/html,<html><body><div id="error" style="display:none">Failed</div></body></html>',
-            intercept_pattern: '**/nonexistent/**',
+            url: serverUrl,
+            intercept_pattern: '**/api/**',
             http_status: 500,
             wait_ms: 500,
           },
@@ -205,19 +238,31 @@ async function runTest(test) {
     const finish = () => {
       if (done) return;
       done = true;
-      proc.kill('SIGTERM');
+      clearTimeout(timer);
+
+      let result;
       try {
-        resolve(test.check(responses));
+        result = test.check(responses);
       } catch (e) {
         console.log('  check error:', e.message);
-        resolve(false);
+        result = false;
       }
+
+      proc.kill('SIGTERM');
+      const killTimeout = setTimeout(() => {
+        try {
+          proc.kill('SIGKILL');
+        } catch {}
+      }, 3000);
+      proc.on('close', () => clearTimeout(killTimeout));
+
+      resolve(result);
     };
 
     const timer = setTimeout(() => {
       console.log('  timeout');
       finish();
-    }, 20000);
+    }, 25000);
 
     proc.stdout.on('data', (d) => {
       buf += d.toString();
@@ -228,7 +273,6 @@ async function runTest(test) {
           const r = JSON.parse(line);
           responses.push(r);
           if (r.id === lastId) {
-            clearTimeout(timer);
             finish();
           }
         } catch {}
@@ -260,5 +304,6 @@ for (const test of TESTS) {
   }
 }
 
+server.close();
 console.log(`\n${passed}/${passed + failed} passed`);
 process.exit(failed > 0 ? 1 : 0);

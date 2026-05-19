@@ -20,6 +20,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "smoke": "node scripts/smoke.mjs",
+    "test": "npm run smoke",
     "prepare": "husky"
   },
   "keywords": [
