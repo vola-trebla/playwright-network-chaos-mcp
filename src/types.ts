@@ -52,3 +52,19 @@ export interface SystemNetworkErrorResult {
   page_state: PageState;
   wait_time_ms: number;
 }
+
+export interface StatefulFailureResult {
+  url: string;
+  intercept_pattern: string;
+  http_status: number;
+  failure_count: number;
+  actual_failed: number;
+  actual_succeeded: number;
+  intercepted_requests: Array<
+    InterceptedRequest & { attempt: number; outcome: 'failed' | 'passed' }
+  >;
+  fallback_found: boolean;
+  fallback_selector: string | null;
+  page_state: PageState;
+  wait_time_ms: number;
+}
